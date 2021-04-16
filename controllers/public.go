@@ -1,11 +1,13 @@
+// controllers/public.go
+
 package controllers
 
 import (
-	"log"
-
 	"github.com/charleyvibez/learnjwt/auth"
 	"github.com/charleyvibez/learnjwt/database"
 	"github.com/charleyvibez/learnjwt/models"
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -24,34 +26,43 @@ type LoginResponse struct {
 // Signup creates a user in db
 func Signup(c *gin.Context) {
 	var user models.User
+
 	err := c.ShouldBindJSON(&user)
 	if err != nil {
-		log.Panicln(err)
+		log.Println(err)
 
 		c.JSON(400, gin.H{
 			"msg": "invalid json",
 		})
 		c.Abort()
+
 		return
 	}
+
 	err = user.HashPassword(user.Password)
 	if err != nil {
 		log.Println(err.Error())
+
 		c.JSON(500, gin.H{
-			"msg": "error hshing password",
+			"msg": "error hashing password",
 		})
 		c.Abort()
+
 		return
 	}
+
 	err = user.CreateUserRecord()
 	if err != nil {
 		log.Println(err)
+
 		c.JSON(500, gin.H{
 			"msg": "error creating user",
 		})
 		c.Abort()
+
 		return
 	}
+
 	c.JSON(200, user)
 }
 
@@ -73,7 +84,17 @@ func Login(c *gin.Context) {
 
 	if result.Error == gorm.ErrRecordNotFound {
 		c.JSON(401, gin.H{
-			"msg": "inalid user credentials",
+			"msg": "invalid user credentials",
+		})
+		c.Abort()
+		return
+	}
+
+	err = user.CheckPassword(payload.Password)
+	if err != nil {
+		log.Println(err)
+		c.JSON(401, gin.H{
+			"msg": "invalid user credentials",
 		})
 		c.Abort()
 		return
@@ -98,6 +119,8 @@ func Login(c *gin.Context) {
 	tokenResponse := LoginResponse{
 		Token: signedToken,
 	}
+
 	c.JSON(200, tokenResponse)
+
 	return
 }
